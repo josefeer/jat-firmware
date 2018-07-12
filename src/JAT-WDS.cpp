@@ -19,11 +19,13 @@
 const int ONE_WIRE_BUS = 6;
 
 /*Constants RF*/
-const int radioID = 2;
+const int radioID = 0;
+const int Group1 = 76;
+const int Group2 = 115;
 
 /*Constants ILI9341*/
 #define TFT_DC 9
-#define TFT_CS 7 
+#define TFT_CS 7
 #define TFT_RST 8
 #define TFT_MISO 12
 #define TFT_MOSI 11
@@ -31,7 +33,7 @@ const int radioID = 2;
 
 /*RF CONFIG*/
 RF24 Radio(4,5);
-byte addresses[][6] = {"1Node","2Node", "3Node", "4Node", "5Node", "6Node", "7Node", "8Node"};
+byte addresses[][6] = {"1Node","2Node", "3Node", "4Node", "5Node", "6Node", "7Node", "8Node", "9Node"};
 
 /*Temp Sensor CONFIG*/
 OneWire oneWire(ONE_WIRE_BUS);
@@ -53,6 +55,7 @@ struct sensors{
     float s6 = -127.00;
     float s7 = -127.00;
     float s8 = -127.00;
+    float s9 = -127.00;
 } values;
 
 struct mainjson{
@@ -64,6 +67,7 @@ struct mainjson{
     String s6;
     String s7;
     String s8;
+    String s9;
 } values2BT;
 
 struct NodeResponse{
@@ -85,12 +89,13 @@ String BTjson = "{\r\n\"S1\":\""+values2BT.s1+
 "\",\r\n\"S6\":\""+values2BT.s6+
 "\",\r\n\"S7\":\""+values2BT.s7+
 "\",\r\n\"S8\":\""+values2BT.s8+
+"\",\r\n\"S8\":\""+values2BT.s9+
 "\r\n}";
 
 
 /*Functions*/
-void PingPongIn76(){
-    Radio.setChannel(76);
+void PingPongG1(){
+    Radio.setChannel(Group1);
     int currentRadioID;
     bool ping = true;
 
@@ -106,8 +111,8 @@ void PingPongIn76(){
 
         Radio.txStandBy();
         Radio.startListening();
-        unsigned long started_waiting_at = micros();              
-        bool timeout = false;                                  
+        unsigned long started_waiting_at = micros();
+        bool timeout = false;
 
         while(!Radio.available()){
             if(micros() - started_waiting_at > 200000){
@@ -131,18 +136,21 @@ void PingPongIn76(){
                 case 4:
                     values.s4 = RFnode.value;
                     break;
+                case 5:
+                    values.s5 = RFnode.value;
+                    break;
                 default:
                     Serial.println("RFnode value error");
                     break;
-            }    
+            }
         }
 
     }
 
 }
 
-void PongPingIn76(NodeResponse package){
-    Radio.setChannel(76);
+void PongPingG1(NodeResponse package){
+    Radio.setChannel(Group1);
 
     switch(radioID){
         case 2:
@@ -163,6 +171,12 @@ void PongPingIn76(NodeResponse package){
             Serial.println("radioID 4, pipes open!");
             break;
 
+        case 5:
+            Radio.openReadingPipe(4,addresses[4]);
+            Radio.openWritingPipe(addresses[0]);
+            Serial.println("radioID 5, pipes open!");
+            break;
+
         default:
             Serial.println("radioID error");
             break;
@@ -170,10 +184,10 @@ void PongPingIn76(NodeResponse package){
 
     if(Radio.available()){
         bool ping = false;
-    
+
         while(Radio.available()){
             Radio.read(&ping, sizeof(ping));
-    
+
         }
         if(ping == true){
             Radio.stopListening();
@@ -189,14 +203,14 @@ void PongPingIn76(NodeResponse package){
 
 }
 
-void PingPongIn115(){
-    Radio.setChannel(115);
+void PingPongG2(){
+    Radio.setChannel(Group2);
     int currentRadioID;
     bool ping = true;
 
-    for(currentRadioID = 4; currentRadioID < 8; currentRadioID++){
+    for(currentRadioID = 5; currentRadioID < 9; currentRadioID++){
         Radio.openWritingPipe(addresses[currentRadioID]);
-        Radio.openReadingPipe(currentRadioID-3, addresses[0]);
+        Radio.openReadingPipe(currentRadioID-4, addresses[0]);
         Radio.stopListening();
         delay(50);
 
@@ -206,8 +220,8 @@ void PingPongIn115(){
 
         Radio.txStandBy();
         Radio.startListening();
-        unsigned long started_waiting_at = micros();              
-        bool timeout = false;                                  
+        unsigned long started_waiting_at = micros();
+        bool timeout = false;
 
         while(!Radio.available()){
             if(micros() - started_waiting_at > 200000){
@@ -222,9 +236,6 @@ void PingPongIn115(){
         else{
             Radio.read(&RFnode, sizeof(RFnode));
             switch(RFnode.nodeID){
-                case 5:
-                    values.s5 = RFnode.value;
-                    break;
                 case 6:
                     values.s6 = RFnode.value;
                     break;
@@ -234,42 +245,45 @@ void PingPongIn115(){
                 case 8:
                     values.s8 = RFnode.value;
                     break;
+                case 9:
+                    values.s9 = RFnode.value;
+                    break;
                 default:
                     Serial.println("RFnode value error");
                     break;
-            }    
+            }
         }
 
     }
 
 }
 
-void PongPingIn115(NodeResponse package){
-    Radio.setChannel(115);
+void PongPingG2(NodeResponse package){
+    Radio.setChannel(Group2);
 
     switch(radioID){
-        case 5:
-            Radio.openReadingPipe(1,addresses[4]);
-            Radio.openWritingPipe(addresses[0]);
-            Serial.println("radioID 5, pipes open!");
-            break;
-
         case 6:
-            Radio.openReadingPipe(2, addresses[5]);
+            Radio.openReadingPipe(1,addresses[5]);
             Radio.openWritingPipe(addresses[0]);
             Serial.println("radioID 6, pipes open!");
             break;
 
         case 7:
-            Radio.openReadingPipe(3,addresses[6]);
+            Radio.openReadingPipe(2, addresses[6]);
             Radio.openWritingPipe(addresses[0]);
             Serial.println("radioID 7, pipes open!");
             break;
 
         case 8:
-            Radio.openReadingPipe(4,addresses[7]);
+            Radio.openReadingPipe(3,addresses[7]);
             Radio.openWritingPipe(addresses[0]);
             Serial.println("radioID 8, pipes open!");
+            break;
+
+        case 9:
+            Radio.openReadingPipe(4,addresses[8]);
+            Radio.openWritingPipe(addresses[0]);
+            Serial.println("radioID 9, pipes open!");
             break;
 
         default:
@@ -279,10 +293,10 @@ void PongPingIn115(NodeResponse package){
 
     if(Radio.available()){
         bool ping = false;
-    
+
         while(Radio.available()){
             Radio.read(&ping, sizeof(ping));
-    
+
         }
         if(ping == true){
             Radio.stopListening();
@@ -314,6 +328,7 @@ void updateBTjson(){
     values2BT.s6 = String(values.s6);
     values2BT.s7 = String(values.s7);
     values2BT.s8 = String(values.s8);
+    values2BT.s9 = String(values.s9);
 
     BTjson = "{\r\n\"S1\":\""+values2BT.s1+
     "\",\r\n\"S2\":\""+values2BT.s2+
@@ -323,6 +338,7 @@ void updateBTjson(){
     "\",\r\n\"S6\":\""+values2BT.s6+
     "\",\r\n\"S7\":\""+values2BT.s7+
     "\",\r\n\"S8\":\""+values2BT.s8+
+    "\",\r\n\"S9\":\""+values2BT.s9+
     "\r\n}";
 
 }
@@ -356,7 +372,7 @@ void startscreen(){
     tft.drawFastVLine(120,240,80, ILI9341_WHITE);
     screenprint("MIN", ILI9341_BLUE, 173, 260, 2);
     screenprint("--.--", ILI9341_WHITE, 158, 290, 2);
-    
+
 }
 
 
@@ -379,22 +395,22 @@ void loop() {
     Serial.println("CURRENT TEMP:"+String(sensortemp));
 
     if(radioID == 1){
-        PingPongIn76();
+        PingPongG1();
         delay(100);
-        PingPongIn115();
+        PingPongG2();
         updateBTjson();
         Serial.println(BTjson);
         BTserial.println(BTjson);
         delay(400);
     }
     else{
-        if(radioID > 1 && radioID < 5){
-            RFnode = makepackage(sensortemp); 
-            PongPingIn76(RFnode);
-        }
-        else if(radioID > 4 && radioID < 9){
+        if(radioID > 1 && radioID < 6){
             RFnode = makepackage(sensortemp);
-            PongPingIn115(RFnode);
+            PongPingG1(RFnode);
+        }
+        else if(radioID > 5 && radioID < 10){
+            RFnode = makepackage(sensortemp);
+            PongPingG2(RFnode);
         }
         else{
             Serial.println("Sent Error");
