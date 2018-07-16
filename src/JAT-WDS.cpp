@@ -19,7 +19,7 @@
 const int ONE_WIRE_BUS = 6;
 
 /*Constants RF*/
-const int radioID = 0;
+const int radioID = 1;
 const int Group1 = 76;
 const int Group2 = 115;
 
@@ -81,16 +81,17 @@ float maxtemp = -2000.00;
 float mintemp = 2000.00;
 float errortemp = -127.00;
 
-String BTjson = "{\r\n\"S1\":\""+values2BT.s1+
-"\",\r\n\"S2\":\""+values2BT.s2+
-"\",\r\n\"S3\":\""+values2BT.s3+
-"\",\r\n\"S4\":\""+values2BT.s4+
-"\",\r\n\"S5\":\""+values2BT.s5+
-"\",\r\n\"S6\":\""+values2BT.s6+
-"\",\r\n\"S7\":\""+values2BT.s7+
-"\",\r\n\"S8\":\""+values2BT.s8+
-"\",\r\n\"S8\":\""+values2BT.s9+
-"\r\n}";
+
+String BTjson = "{\"S1\":\""+values2BT.s1+
+"\",\"S2\":\""+values2BT.s2+
+"\",\"S3\":\""+values2BT.s3+
+"\",\"S4\":\""+values2BT.s4+
+"\",\"S5\":\""+values2BT.s5+
+"\",\"S6\":\""+values2BT.s6+
+"\",\"S7\":\""+values2BT.s7+
+"\",\"S8\":\""+values2BT.s8+
+"\",\"S9\":\""+values2BT.s9+
+"\"}";
 
 
 /*Functions*/
@@ -320,7 +321,7 @@ NodeResponse makepackage(float value){
 }
 
 void updateBTjson(){
-    values2BT.s1 = String(String(values.s1));
+    values2BT.s1 = String(values.s1);
     values2BT.s2 = String(values.s2);
     values2BT.s3 = String(values.s3);
     values2BT.s4 = String(values.s4);
@@ -330,16 +331,16 @@ void updateBTjson(){
     values2BT.s8 = String(values.s8);
     values2BT.s9 = String(values.s9);
 
-    BTjson = "{\r\n\"S1\":\""+values2BT.s1+
-    "\",\r\n\"S2\":\""+values2BT.s2+
-    "\",\r\n\"S3\":\""+values2BT.s3+
-    "\",\r\n\"S4\":\""+values2BT.s4+
-    "\",\r\n\"S5\":\""+values2BT.s5+
-    "\",\r\n\"S6\":\""+values2BT.s6+
-    "\",\r\n\"S7\":\""+values2BT.s7+
-    "\",\r\n\"S8\":\""+values2BT.s8+
-    "\",\r\n\"S9\":\""+values2BT.s9+
-    "\r\n}";
+    BTjson = "{\"S1\":\""+values2BT.s1+
+    "\",\"S2\":\""+values2BT.s2+
+    "\",\"S3\":\""+values2BT.s3+
+    "\",\"S4\":\""+values2BT.s4+
+    "\",\"S5\":\""+values2BT.s5+
+    "\",\"S6\":\""+values2BT.s6+
+    "\",\"S7\":\""+values2BT.s7+
+    "\",\"S8\":\""+values2BT.s8+
+    "\",\"S9\":\""+values2BT.s9+
+    "\"}";
 
 }
 
