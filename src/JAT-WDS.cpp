@@ -19,7 +19,7 @@
 const int ONE_WIRE_BUS = 6;
 
 /*Constants RF*/
-const int radioID = 1;
+const int radioID = 3;
 const int Group1 = 76;
 const int Group2 = 115;
 
@@ -46,7 +46,7 @@ SoftwareSerial BTserial(18, 19); // RX | TX
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
 
 /*Global Variables*/
-struct sensors{
+struct temperatureSensors{
     float s1 = -127.00;
     float s2 = -127.00;
     float s3 = -127.00;
@@ -57,18 +57,6 @@ struct sensors{
     float s8 = -127.00;
     float s9 = -127.00;
 } values;
-
-struct mainjson{
-    String s1;
-    String s2;
-    String s3;
-    String s4;
-    String s5;
-    String s6;
-    String s7;
-    String s8;
-    String s9;
-} values2BT;
 
 struct NodeResponse{
     int nodeID;
@@ -81,51 +69,29 @@ float maxtemp = -2000.00;
 float mintemp = 2000.00;
 float errortemp = -127.00;
 
-
-String BTjson = "{\"S1\":\""+values2BT.s1+
-"\",\"S2\":\""+values2BT.s2+
-"\",\"S3\":\""+values2BT.s3+
-"\",\"S4\":\""+values2BT.s4+
-"\",\"S5\":\""+values2BT.s5+
-"\",\"S6\":\""+values2BT.s6+
-"\",\"S7\":\""+values2BT.s7+
-"\",\"S8\":\""+values2BT.s8+
-"\",\"S9\":\""+values2BT.s9+
-"\"}";
-
+String BTjson;
 
 /*Functions*/
-void PingPongG1(){
-    Radio.setChannel(Group1);
+void pipesSetup(){
+
+    Radio.openWritingPipe(addresses[0]);
+    Serial.println("JAT-"+String(radioID)+": pipes open");
+
+}
+
+void ReceiveRFData(){
+    
     int currentRadioID;
-    bool ping = true;
+
+    Radio.setChannel(Group1);
+    delay(50);
 
     for(currentRadioID = 1; currentRadioID < 4; currentRadioID++){
-        Radio.openWritingPipe(addresses[currentRadioID]);
+
         Radio.openReadingPipe(currentRadioID, addresses[0]);
-        Radio.stopListening();
-        delay(50);
-
-        if(!Radio.write(&ping, sizeof(ping))){
-            Serial.println("failed reach radioID: "+String(currentRadioID+1));
-        }
-
-        Radio.txStandBy();
-        Radio.startListening();
-        unsigned long started_waiting_at = micros();
-        bool timeout = false;
-
-        while(!Radio.available()){
-            if(micros() - started_waiting_at > 200000){
-                timeout = true;
-                break;
-            }
-        }
-
-        if(timeout){
-            Serial.println("failed, request timeout");
-        }
-        else{
+        delay(100);
+        
+        if(Radio.available()){
             Radio.read(&RFnode, sizeof(RFnode));
             switch(RFnode.nodeID){
                 case 2:
@@ -144,172 +110,18 @@ void PingPongG1(){
                     Serial.println("RFnode value error");
                     break;
             }
+
         }
 
-    }
+     }
 
 }
 
-void PongPingG1(NodeResponse package){
-    Radio.setChannel(Group1);
+void SendRFData(NodeResponse package){
 
-    switch(radioID){
-        case 2:
-            Radio.openReadingPipe(1,addresses[1]);
-            Radio.openWritingPipe(addresses[0]);
-            Serial.println("radioID 2, pipes open!");
-            break;
-
-        case 3:
-            Radio.openReadingPipe(2, addresses[2]);
-            Radio.openWritingPipe(addresses[0]);
-            Serial.println("radioID 3, pipes open!");
-            break;
-
-        case 4:
-            Radio.openReadingPipe(3,addresses[3]);
-            Radio.openWritingPipe(addresses[0]);
-            Serial.println("radioID 4, pipes open!");
-            break;
-
-        case 5:
-            Radio.openReadingPipe(4,addresses[4]);
-            Radio.openWritingPipe(addresses[0]);
-            Serial.println("radioID 5, pipes open!");
-            break;
-
-        default:
-            Serial.println("radioID error");
-            break;
-    }
-
-    if(Radio.available()){
-        bool ping = false;
-
-        while(Radio.available()){
-            Radio.read(&ping, sizeof(ping));
-
-        }
-        if(ping == true){
-            Radio.stopListening();
-            Radio.write(&package, sizeof(package));
-            Radio.txStandBy();
-            Radio.startListening();
-        }
-        else{
-            Serial.println("ping failed!");
-        }
-
-    }
-
-}
-
-void PingPongG2(){
-    Radio.setChannel(Group2);
-    int currentRadioID;
-    bool ping = true;
-
-    for(currentRadioID = 5; currentRadioID < 9; currentRadioID++){
-        Radio.openWritingPipe(addresses[currentRadioID]);
-        Radio.openReadingPipe(currentRadioID-4, addresses[0]);
-        Radio.stopListening();
-        delay(50);
-
-        if(!Radio.write(&ping, sizeof(ping))){
-            Serial.println("failed reach radioID: "+String(currentRadioID+1));
-        }
-
-        Radio.txStandBy();
-        Radio.startListening();
-        unsigned long started_waiting_at = micros();
-        bool timeout = false;
-
-        while(!Radio.available()){
-            if(micros() - started_waiting_at > 200000){
-                timeout = true;
-                break;
-            }
-        }
-
-        if(timeout){
-            Serial.println("failed, request timeout");
-        }
-        else{
-            Radio.read(&RFnode, sizeof(RFnode));
-            switch(RFnode.nodeID){
-                case 6:
-                    values.s6 = RFnode.value;
-                    break;
-                case 7:
-                    values.s7 = RFnode.value;
-                    break;
-                case 8:
-                    values.s8 = RFnode.value;
-                    break;
-                case 9:
-                    values.s9 = RFnode.value;
-                    break;
-                default:
-                    Serial.println("RFnode value error");
-                    break;
-            }
-        }
-
-    }
-
-}
-
-void PongPingG2(NodeResponse package){
-    Radio.setChannel(Group2);
-
-    switch(radioID){
-        case 6:
-            Radio.openReadingPipe(1,addresses[5]);
-            Radio.openWritingPipe(addresses[0]);
-            Serial.println("radioID 6, pipes open!");
-            break;
-
-        case 7:
-            Radio.openReadingPipe(2, addresses[6]);
-            Radio.openWritingPipe(addresses[0]);
-            Serial.println("radioID 7, pipes open!");
-            break;
-
-        case 8:
-            Radio.openReadingPipe(3,addresses[7]);
-            Radio.openWritingPipe(addresses[0]);
-            Serial.println("radioID 8, pipes open!");
-            break;
-
-        case 9:
-            Radio.openReadingPipe(4,addresses[8]);
-            Radio.openWritingPipe(addresses[0]);
-            Serial.println("radioID 9, pipes open!");
-            break;
-
-        default:
-            Serial.println("radioID error");
-            break;
-    }
-
-    if(Radio.available()){
-        bool ping = false;
-
-        while(Radio.available()){
-            Radio.read(&ping, sizeof(ping));
-
-        }
-        if(ping == true){
-            Radio.stopListening();
-            Radio.write(&package, sizeof(package));
-            Radio.txStandBy();
-            Radio.startListening();
-        }
-        else{
-            Serial.println("ping failed!");
-        }
-
-    }
+    Radio.write(&package, sizeof(package));
+    Radio.txStandBy();
+    Serial.println("JAT-"+String(radioID)+": Package Send");
 
 }
 
@@ -318,30 +130,6 @@ NodeResponse makepackage(float value){
     package.value = value;
 
     return package;
-}
-
-void updateBTjson(){
-    values2BT.s1 = String(values.s1);
-    values2BT.s2 = String(values.s2);
-    values2BT.s3 = String(values.s3);
-    values2BT.s4 = String(values.s4);
-    values2BT.s5 = String(values.s5);
-    values2BT.s6 = String(values.s6);
-    values2BT.s7 = String(values.s7);
-    values2BT.s8 = String(values.s8);
-    values2BT.s9 = String(values.s9);
-
-    BTjson = "{\"S1\":\""+values2BT.s1+
-    "\",\"S2\":\""+values2BT.s2+
-    "\",\"S3\":\""+values2BT.s3+
-    "\",\"S4\":\""+values2BT.s4+
-    "\",\"S5\":\""+values2BT.s5+
-    "\",\"S6\":\""+values2BT.s6+
-    "\",\"S7\":\""+values2BT.s7+
-    "\",\"S8\":\""+values2BT.s8+
-    "\",\"S9\":\""+values2BT.s9+
-    "\"}";
-
 }
 
 void screenprint(String text, int color, int x, int y, int size){
@@ -376,52 +164,18 @@ void startscreen(){
 
 }
 
-
-/*MCU Functions*/
-void setup() {
-    Serial.begin(9600);
-    BTserial.begin(9600);
-    sensors.begin();
-    Radio.begin();
-    Radio.setPALevel(RF24_PA_HIGH);
-    Radio.setDataRate(RF24_250KBPS);
-    Radio.startListening();
-    startscreen();
-}
-
-void loop() {
-    sensors.requestTemperatures();
-    sensortemp = sensors.getTempCByIndex(0);
-    values.s1 = sensortemp;
-    Serial.println("CURRENT TEMP:"+String(sensortemp));
-
-    if(radioID == 1){
-        PingPongG1();
-        delay(100);
-        PingPongG2();
-        updateBTjson();
-        Serial.println(BTjson);
-        BTserial.println(BTjson);
-        delay(400);
-    }
-    else{
-        if(radioID > 1 && radioID < 6){
-            RFnode = makepackage(sensortemp);
-            PongPingG1(RFnode);
-        }
-        else if(radioID > 5 && radioID < 10){
-            RFnode = makepackage(sensortemp);
-            PongPingG2(RFnode);
-        }
-        else{
-            Serial.println("Sent Error");
-        }
-        delay(200);
-    }
+void updatescreen(){
 
     if (sensortemp == errortemp) {
-      tft.fillRect(50,175,150,40,ILI9341_BLACK);
-      screenprint("ERROR", ILI9341_WHITE,57,180,4);
+
+        if (previoustemp != errortemp){
+            previoustemp = sensortemp;
+
+            tft.fillRect(50,175,150,40,ILI9341_BLACK);
+            screenprint("ERROR", ILI9341_WHITE,57,180,4);
+
+        }
+
     }
     else{
 
@@ -447,5 +201,84 @@ void loop() {
       }
 
     }
+
+}
+
+void updateBTjson(){
+
+    BTjson = "{\"S1\":\""+String(values.s1)+
+    "\",\"S2\":\""+String(values.s2)+
+    "\",\"S3\":\""+String(values.s3)+
+    "\",\"S4\":\""+String(values.s4)+
+    "\",\"S5\":\""+String(values.s5)+
+    "\",\"S6\":\""+String(values.s6)+
+    "\",\"S7\":\""+String(values.s7)+
+    "\",\"S8\":\""+String(values.s8)+
+    "\",\"S9\":\""+String(values.s9)+
+    "\"}";
+
+}
+
+
+/*MCU Functions*/
+void setup() {
+
+    Serial.begin(9600);
+    sensors.begin();
+    Radio.begin();
+    Radio.setPALevel(RF24_PA_HIGH);
+    Radio.setDataRate(RF24_250KBPS);
+
+    if(radioID == 1){
+
+        BTserial.begin(9600);
+        Radio.startListening();
+
+    }
+    else if(radioID >1 && radioID < 6){
+
+        Radio.setChannel(Group1);
+        Radio.stopListening();
+        pipesSetup();
+
+    }
+    else {
+
+        Serial.println("********** radioID error **********");
+
+    }
+
+    startscreen();
+
+}
+
+void loop() {
+
+    sensors.requestTemperatures();
+    sensortemp = sensors.getTempCByIndex(0);
+    Serial.println("JAT-"+String(radioID)+": "+String(sensortemp));
+
+    if(radioID == 1){
+
+        values.s1 = sensortemp;
+        ReceiveRFData();
+        updateBTjson();
+        Serial.println(BTjson);
+        BTserial.println(BTjson);
+
+    }
+    else if(radioID > 1 && radioID < 6){
+
+        RFnode = makepackage(sensortemp);
+        SendRFData(RFnode);
+
+    }
+    else{
+
+        Serial.println("********** radioID error **********");
+
+    }
+
+    updatescreen();
 
 }
